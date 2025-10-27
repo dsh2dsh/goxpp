@@ -1,9 +1,11 @@
 # goxpp
 
-[![Build Status](https://github.com/mmcdole/goxpp/actions/workflows/ci.yml/badge.svg)](https://github.com/mmcdole/goxpp/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/mmcdole/goxpp/branch/master/graph/badge.svg)](https://codecov.io/gh/mmcdole/goxpp)
-[![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
-[![Go Reference](https://pkg.go.dev/badge/github.com/mmcdole/goxpp.svg)](https://pkg.go.dev/github.com/mmcdole/goxpp)
+[![Go](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml/badge.svg)](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml)
+[![GoDoc](https://godoc.org/github.com/dsh2dsh/goxpp?status.png)](https://godoc.org/github.com/dsh2dsh/goxpp)
+
+This project is a fork of [gofeed](https://github.com/mmcdole/goxpp).
+
+---
 
 A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://www.xmlpull.org/v1/download/unpacked/doc/quick_intro.html). It provides fine-grained control over XML parsing with a simple, intuitive API.
 
@@ -16,13 +18,13 @@ A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://
 ## Installation
 
 ```bash
-go get github.com/mmcdole/goxpp
+go get github.com/dsh2dsh/goxpp
 ```
 
 ## Quick Start
 
 ```go
-import "github.com/mmcdole/goxpp"
+import "github.com/dsh2dsh/goxpp"
 
 // Parse RSS feed
 file, _ := os.Open("feed.rss")
@@ -70,7 +72,7 @@ for tok, err := p.NextTag(); tok != xpp.EndDocument; tok, err = p.NextTag() {
 
 ## Documentation
 
-For detailed documentation and examples, visit [pkg.go.dev](https://pkg.go.dev/github.com/mmcdole/goxpp).
+For detailed documentation and examples, visit [pkg.go.dev](https://pkg.go.dev/github.com/dsh2dsh/goxpp).
 
 ## License
 
