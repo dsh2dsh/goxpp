@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/url"
 	"strings"
 )
 
-type XMLEventType int
-type CharsetReader func(charset string, input io.Reader) (io.Reader, error)
+type (
+	XMLEventType  int
+	CharsetReader func(charset string, input io.Reader) (io.Reader, error)
+)
 
 const xmlNSURI = "http://www.w3.org/XML/1998/namespace"
 
@@ -64,7 +67,7 @@ type XMLPullParser struct {
 	Text  string
 
 	decoder *xml.Decoder
-	token   interface{}
+	token   any
 }
 
 func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader) *XMLPullParser {
@@ -139,7 +142,7 @@ func (p *XMLPullParser) NextToken() (event XMLEventType, err error) {
 			p.Event = EndDocument
 			return p.Event, nil
 		}
-		return event, err
+		return event, fmt.Errorf("goxpp: %w", err)
 	}
 
 	p.token = xml.CopyToken(token)
@@ -165,15 +168,16 @@ func (p *XMLPullParser) NextText() (string, error) {
 
 	var result string
 	for t == Text {
-		result = result + p.Text
+		result += p.Text
 		t, err = p.Next()
 		if err != nil {
 			return "", err
 		}
 
 		if t != EndTag && t != Text {
-			errstr := fmt.Sprintf("event text must be immediately followed by endtag or text but got %s", p.EventName(t))
-			return "", errors.New(errstr)
+			return "", errors.New(
+				"event text must be immediately followed by endtag or text but got " +
+					p.EventName(t))
 		}
 	}
 
@@ -186,11 +190,12 @@ func (p *XMLPullParser) Skip() error {
 		if err != nil {
 			return err
 		}
-		if tok == StartTag {
+		switch tok {
+		case StartTag:
 			if err := p.Skip(); err != nil {
 				return err
 			}
-		} else if tok == EndTag {
+		case EndTag:
 			return nil
 		}
 	}
@@ -209,26 +214,29 @@ func (p *XMLPullParser) Expect(event XMLEventType, name string) (err error) {
 	return p.ExpectAll(event, "*", name)
 }
 
-func (p *XMLPullParser) ExpectAll(event XMLEventType, space string, name string) (err error) {
-	if !(p.Event == event && (strings.EqualFold(p.Space, space) || space == "*") && (strings.EqualFold(p.Name, name) || name == "*")) {
-		err = fmt.Errorf("expected space:%s name:%s event:%s but got space:%s name:%s event:%s at offset: %d", space, name, p.EventName(event), p.Space, p.Name, p.EventName(p.Event), p.decoder.InputOffset())
+func (p *XMLPullParser) ExpectAll(event XMLEventType, space, name string) error {
+	ok := p.Event == event &&
+		(strings.EqualFold(p.Space, space) || space == "*") &&
+		(strings.EqualFold(p.Name, name) || name == "*")
+	if !ok {
+		return fmt.Errorf("expected space:%s name:%s event:%s but got space:%s name:%s event:%s at offset: %d", space, name, p.EventName(event), p.Space, p.Name, p.EventName(p.Event), p.decoder.InputOffset())
 	}
-	return
+	return nil
 }
 
-func (p *XMLPullParser) DecodeElement(v interface{}) error {
+func (p *XMLPullParser) DecodeElement(v any) error {
 	if p.Event != StartTag {
 		return errors.New("decodeelement can only be called from a starttag event")
 	}
 
-	//tok := &p.token
+	// tok := &p.token
 
 	startToken := p.token.(xml.StartElement)
 
 	// Consumes all tokens until the matching end token.
 	err := p.decoder.DecodeElement(v, &startToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("goxpp: %w", err)
 	}
 
 	name := p.Name
@@ -243,7 +251,7 @@ func (p *XMLPullParser) DecodeElement(v interface{}) error {
 
 	// if the token we decoded had an xml:base attribute, we need to pop it
 	// from the stack
-	// Note: this means it is up to the caller of DecodeElement to save the curent xml:base
+	// Note: this means it is up to the caller of DecodeElement to save the current xml:base
 	// before calling DecodeElement if it needs to resolve relative URLs in `v`
 	for _, attr := range startToken.Attr {
 		if attr.Name.Space == xmlNSURI && attr.Name.Local == "base" {
@@ -258,46 +266,46 @@ func (p *XMLPullParser) IsWhitespace() bool {
 	return strings.TrimSpace(p.Text) == ""
 }
 
-func (p *XMLPullParser) EventName(e XMLEventType) (name string) {
+func (p *XMLPullParser) EventName(e XMLEventType) string {
 	switch e {
 	case StartTag:
-		name = "StartTag"
+		return "StartTag"
 	case EndTag:
-		name = "EndTag"
+		return "EndTag"
 	case StartDocument:
-		name = "StartDocument"
+		return "StartDocument"
 	case EndDocument:
-		name = "EndDocument"
+		return "EndDocument"
 	case ProcessingInstruction:
-		name = "ProcessingInstruction"
+		return "ProcessingInstruction"
 	case Directive:
-		name = "Directive"
+		return "Directive"
 	case Comment:
-		name = "Comment"
+		return "Comment"
 	case Text:
-		name = "Text"
+		return "Text"
 	case IgnorableWhitespace:
-		name = "IgnorableWhitespace"
+		return "IgnorableWhitespace"
 	}
-	return
+	return ""
 }
 
-func (p *XMLPullParser) EventType(t xml.Token) (event XMLEventType) {
+func (p *XMLPullParser) EventType(t xml.Token) XMLEventType {
 	switch t.(type) {
 	case xml.StartElement:
-		event = StartTag
+		return StartTag
 	case xml.EndElement:
-		event = EndTag
+		return EndTag
 	case xml.CharData:
-		event = Text
+		return Text
 	case xml.Comment:
-		event = Comment
+		return Comment
 	case xml.ProcInst:
-		event = ProcessingInstruction
+		return ProcessingInstruction
 	case xml.Directive:
-		event = Directive
+		return Directive
 	}
-	return
+	return 0
 }
 
 // resolve the given string as a URL relative to current xml:base
@@ -309,12 +317,12 @@ func (p *XMLPullParser) XmlBaseResolveUrl(u string) (*url.URL, error) {
 
 	relURL, err := url.Parse(u)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("goxpp: %w", err)
 	}
 	if curr.Path != "" && u != "" && curr.Path[len(curr.Path)-1] != '/' {
 		// There's no reason someone would use a path in xml:base if they
 		// didn't mean for it to be a directory
-		curr.Path = curr.Path + "/"
+		curr.Path += "/"
 	}
 	absURL := curr.ResolveReference(relURL)
 	return absURL, nil
@@ -343,7 +351,7 @@ func (p *XMLPullParser) processStartToken(t xml.StartElement) {
 	p.Name = t.Name.Local
 	p.Space = t.Name.Space
 	p.trackNamespaces(t)
-	p.pushBase()
+	_ = p.pushBase()
 }
 
 func (p *XMLPullParser) processEndToken(t xml.EndElement) {
@@ -383,9 +391,7 @@ func (p *XMLPullParser) resetTokenState() {
 
 func (p *XMLPullParser) trackNamespaces(t xml.StartElement) {
 	newSpace := map[string]string{}
-	for k, v := range p.Spaces {
-		newSpace[k] = v
-	}
+	maps.Copy(newSpace, p.Spaces)
 	for _, attr := range t.Attr {
 		if attr.Name.Space == "xmlns" {
 			space := strings.TrimSpace(attr.Value)
@@ -426,7 +432,7 @@ func (p *XMLPullParser) pushBase() error {
 
 	newURL, err := url.Parse(base)
 	if err != nil {
-		return err
+		return fmt.Errorf("goxpp: %w", err)
 	}
 
 	topURL := p.BaseStack.Top()

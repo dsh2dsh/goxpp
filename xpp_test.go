@@ -5,12 +5,14 @@ import (
 	"io"
 	"testing"
 
-	xpp "github.com/mmcdole/goxpp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	xpp "github.com/mmcdole/goxpp"
 )
 
 func TestEventName(t *testing.T) {
-	var eventNameTests = []struct {
+	eventNameTests := []struct {
 		event    xpp.XMLEventType
 		expected string
 	}{
@@ -28,7 +30,7 @@ func TestEventName(t *testing.T) {
 	p := xpp.XMLPullParser{}
 	for _, test := range eventNameTests {
 		actual := p.EventName(test.event)
-		assert.Equal(t, actual, test.expected, "Expect event name %s did not match actual event name %s.\n", test.expected, actual)
+		assert.Equal(t, test.expected, actual, "Expect event name %s did not match actual event name %s.\n", test.expected, actual)
 	}
 }
 
@@ -39,9 +41,9 @@ func TestSpaceStackSelfClosingTag(t *testing.T) {
 	r := bytes.NewBufferString(`<a:y xmlns:a="z"/><x>foo</x>`)
 	p := xpp.NewXMLPullParser(r, false, crReader)
 	toNextStart(t, p)
-	assert.EqualValues(t, map[string]string{"z": "a"}, p.Spaces)
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
 	toNextStart(t, p)
-	assert.EqualValues(t, map[string]string{}, p.Spaces)
+	assert.Equal(t, map[string]string{}, p.Spaces)
 }
 
 func TestSpaceStackNestedTag(t *testing.T) {
@@ -51,11 +53,11 @@ func TestSpaceStackNestedTag(t *testing.T) {
 	r := bytes.NewBufferString(`<y xmlns:a="z"><a:x>foo</a:x></y><w></w>`)
 	p := xpp.NewXMLPullParser(r, false, crReader)
 	toNextStart(t, p)
-	assert.EqualValues(t, map[string]string{"z": "a"}, p.Spaces)
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
 	toNextStart(t, p)
-	assert.EqualValues(t, map[string]string{"z": "a"}, p.Spaces)
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
 	toNextStart(t, p)
-	assert.EqualValues(t, map[string]string{}, p.Spaces)
+	assert.Equal(t, map[string]string{}, p.Spaces)
 }
 
 func TestDecodeElementDepth(t *testing.T) {
@@ -105,7 +107,7 @@ func TestXMLBase(t *testing.T) {
 	assert.Equal(t, "https://example.org/path/relative", p.BaseStack.Top().String())
 
 	resolved, err := p.XmlBaseResolveUrl("test")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "https://example.org/path/relative/test", resolved.String())
 	p.DecodeElement(&v{})
 
@@ -170,18 +172,18 @@ func TestNextText(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := xpp.NewXMLPullParser(bytes.NewBufferString(tt.input), true, nil)
-			
+
 			// Move to first start tag
 			_, err := p.NextTag()
-			assert.NoError(t, err)
-			
+			require.NoError(t, err)
+
 			result, err := p.NextText()
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
-			
-			assert.NoError(t, err)
+
+			require.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -227,26 +229,26 @@ func TestSkip(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := xpp.NewXMLPullParser(bytes.NewBufferString(tt.input), true, nil)
-			
+
 			// Move to root
 			_, err := p.NextTag()
-			assert.NoError(t, err)
-			
+			require.NoError(t, err)
+
 			// Move to skip element
 			_, err = p.NextTag()
-			assert.NoError(t, err)
-			
+			require.NoError(t, err)
+
 			// Skip the element
 			err = p.Skip()
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
-			
+			require.NoError(t, err)
+
 			// Verify we're at the keep element
 			_, err = p.NextTag()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, "keep", p.Name)
 		})
 	}
@@ -297,7 +299,7 @@ func TestSpecialCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Logf("Starting test case: %s with input: %s", tt.name, tt.input)
 			p := xpp.NewXMLPullParser(bytes.NewBufferString(tt.input), true, nil)
-			
+
 			var events []xpp.XMLEventType
 			for {
 				event, err := p.NextToken()
@@ -306,13 +308,13 @@ func TestSpecialCases(t *testing.T) {
 				}
 				events = append(events, event)
 				t.Logf("Event: %s (Name: %s, Text: %q)", p.EventName(event), p.Name, p.Text)
-				
+
 				// Stop when we reach EndDocument
 				if event == xpp.EndDocument {
 					break
 				}
 			}
-			
+
 			assert.Equal(t, tt.expectedTypes, events, "Event sequence mismatch")
 		})
 	}
