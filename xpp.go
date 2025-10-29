@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/url"
 	"strings"
-	"unsafe"
 )
 
 const (
@@ -70,12 +69,9 @@ type XMLPullParser struct {
 	Name  string
 	Space string
 
-	// Text refers to the parser's internal buffer and remain valid only for the
-	// current state. To acquire a copy of the string, call [strings.Call].
-	Text string
-
 	decoder *xml.Decoder
 	token   any
+	text    []byte
 }
 
 func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader,
@@ -184,7 +180,7 @@ func (p *XMLPullParser) NextText() (string, error) {
 
 	var result string
 	for t == Text {
-		result += strings.Clone(p.Text)
+		result += p.Text()
 		t, err = p.Next()
 		if err != nil {
 			return "", err
@@ -197,6 +193,14 @@ func (p *XMLPullParser) NextText() (string, error) {
 		}
 	}
 	return result, nil
+}
+
+// Text returns text of current xml token as string.
+func (p *XMLPullParser) Text() string {
+	if len(p.text) == 0 {
+		return ""
+	}
+	return string(p.text)
 }
 
 func (p *XMLPullParser) Skip() error {
@@ -274,7 +278,7 @@ func (p *XMLPullParser) DecodeElement(v any) error {
 }
 
 func (p *XMLPullParser) IsWhitespace() bool {
-	return strings.TrimSpace(p.Text) == ""
+	return strings.TrimSpace(p.Text()) == ""
 }
 
 func (p *XMLPullParser) EventName(e XMLEventType) string {
@@ -378,36 +382,26 @@ func (p *XMLPullParser) processEndToken(t xml.EndElement) {
 }
 
 func (p *XMLPullParser) processCharDataToken(t xml.CharData) {
-	p.Text = unsafeBytesToString(t)
-}
-
-// This conversion *does not* copy data. Note that casting via
-// "(string)([]byte)" *does* copy data. Also note that you *should not* change
-// the byte slice after conversion, because Go strings are treated as immutable.
-// This would cause a segmentation violation panic.
-//
-// https://www.reddit.com/r/golang/comments/14xvgoj/converting_string_byte/
-func unsafeBytesToString(b []byte) string {
-	return unsafe.String(unsafe.SliceData(b), len(b))
+	p.text = []byte(t)
 }
 
 func (p *XMLPullParser) processCommentToken(t xml.Comment) {
-	p.Text = unsafeBytesToString(t)
+	p.text = []byte(t)
 }
 
 func (p *XMLPullParser) processProcInstToken(t xml.ProcInst) {
-	p.Text = t.Target + string(t.Inst)
+	p.text = []byte(t.Target + " " + string(t.Inst))
 }
 
 func (p *XMLPullParser) processDirectiveToken(t xml.Directive) {
-	p.Text = unsafeBytesToString(t)
+	p.text = []byte(t)
 }
 
 func (p *XMLPullParser) resetTokenState() {
 	p.Attrs = nil
 	p.Name = ""
 	p.Space = ""
-	p.Text = ""
+	p.text = nil
 }
 
 func (p *XMLPullParser) trackNamespaces(t xml.StartElement) {

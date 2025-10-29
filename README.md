@@ -16,9 +16,8 @@ from upstream:
   BenchmarkNextTag-6  173622  7286 ns/op  4305 B/op  71 allocs/op
   ```
 
-  `XMLPullParser.Text` refers to the parser's internal buffer and remain valid
-  only for the current state. To acquire a copy of the string, call
-  `strings.Call`.
+  `Text` field is private now and accessible via `Text` method, which returns
+  copy of the parser's internal buffer as a string.
 
 * Export internal `xml.Token`
 

@@ -338,7 +338,7 @@ func TestSpecialCases(t *testing.T) {
 					t.Fatalf("unexpected error: %v", err)
 				}
 				events = append(events, event)
-				t.Logf("Event: %s (Name: %s, Text: %q)", p.EventName(event), p.Name, p.Text)
+				t.Logf("Event: %s (Name: %s, Text: %q)", p.EventName(event), p.Name, p.Text())
 
 				// Stop when we reach EndDocument
 				if event == xpp.EndDocument {
