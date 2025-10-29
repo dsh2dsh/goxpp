@@ -28,6 +28,19 @@ from upstream:
   buffer and remain valid only for the current state. To acquire a copy of the
   bytes, call `xml.CopyToken` or the token's `Copy` method.
 
+* Allow custom `xml.Decoder` to be used
+
+  `NewXMLPullParser` now can be called with an optional array of options.
+  `WithDecoder` option configures `XMLPullParser` with custom `xml.Decoder`,
+  like
+
+  ``` go
+  p := xpp.NewXMLPullParser(nil, false, cr, xpp.WithDecoder(xml.NewDecoder(r)))
+  ```
+
+  `NewXMLPullParser` will override `Strict` and `CharsetReader` of
+  `xml.Decoder`.
+
 ---
 
 A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://www.xmlpull.org/v1/download/unpacked/doc/quick_intro.html). It provides fine-grained control over XML parsing with a simple, intuitive API.

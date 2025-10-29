@@ -78,21 +78,24 @@ type XMLPullParser struct {
 	token   any
 }
 
-func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader) *XMLPullParser {
-	d := xml.NewDecoder(r)
-	d.Strict = strict
-	d.CharsetReader = cr
-
+func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader,
+	opts ...Option,
+) *XMLPullParser {
 	p := &XMLPullParser{
-		decoder:     d,
 		Event:       StartDocument,
 		SpacesStack: []map[string]string{{}},
 	}
-	return p.init()
-}
 
-func (p *XMLPullParser) init() *XMLPullParser {
+	for _, fn := range opts {
+		fn(p)
+	}
 	p.Spaces = p.SpacesStack[0]
+
+	if p.decoder == nil {
+		p.decoder = xml.NewDecoder(r)
+	}
+	p.decoder.Strict = strict
+	p.decoder.CharsetReader = cr
 	return p
 }
 
