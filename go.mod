@@ -1,4 +1,4 @@
-module github.com/dsh2dsh/goxpp
+module github.com/dsh2dsh/goxpp/v2
 
 go 1.25
 

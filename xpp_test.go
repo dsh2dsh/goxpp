@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	xpp "github.com/dsh2dsh/goxpp"
+	xpp "github.com/dsh2dsh/goxpp/v2"
 )
 
 func BenchmarkNextTag(b *testing.B) {

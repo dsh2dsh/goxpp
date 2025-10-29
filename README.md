@@ -1,7 +1,7 @@
 # goxpp
 
 [![Go](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml/badge.svg)](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml)
-[![GoDoc](https://godoc.org/github.com/dsh2dsh/goxpp?status.png)](https://godoc.org/github.com/dsh2dsh/goxpp)
+[![GoDoc](https://godoc.org/github.com/dsh2dsh/goxpp/v2?status.png)](https://godoc.org/github.com/dsh2dsh/goxpp/v2)
 
 This project is a fork of [gofeed](https://github.com/mmcdole/goxpp). Changes
 from upstream:
@@ -54,13 +54,13 @@ A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://
 ## Installation
 
 ```bash
-go get github.com/dsh2dsh/goxpp
+go get github.com/dsh2dsh/goxpp/v2
 ```
 
 ## Quick Start
 
 ```go
-import "github.com/dsh2dsh/goxpp"
+import "github.com/dsh2dsh/goxpp/v2"
 
 // Parse RSS feed
 file, _ := os.Open("feed.rss")
@@ -108,7 +108,7 @@ for tok, err := p.NextTag(); tok != xpp.EndDocument; tok, err = p.NextTag() {
 
 ## Documentation
 
-For detailed documentation and examples, visit [pkg.go.dev](https://pkg.go.dev/github.com/dsh2dsh/goxpp).
+For detailed documentation and examples, visit [pkg.go.dev](https://pkg.go.dev/github.com/dsh2dsh/goxpp/v2).
 
 ## License
 
