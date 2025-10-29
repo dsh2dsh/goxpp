@@ -181,7 +181,7 @@ func (p *XMLPullParser) NextText() (string, error) {
 
 	var result string
 	for t == Text {
-		result += p.Text
+		result += strings.Clone(p.Text)
 		t, err = p.Next()
 		if err != nil {
 			return "", err
