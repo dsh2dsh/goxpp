@@ -178,9 +178,9 @@ func (p *XMLPullParser) NextText() (string, error) {
 		return "", errors.New("parser must be on endtag or text to read text")
 	}
 
-	var result string
+	var result strings.Builder
 	for t == Text {
-		result += p.Text()
+		result.Write(p.text)
 		t, err = p.Next()
 		if err != nil {
 			return "", err
@@ -192,7 +192,7 @@ func (p *XMLPullParser) NextText() (string, error) {
 					p.EventName(t))
 		}
 	}
-	return result, nil
+	return result.String(), nil
 }
 
 // Text returns text of current xml token as string.
