@@ -3,7 +3,22 @@
 [![Go](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml/badge.svg)](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml)
 [![GoDoc](https://godoc.org/github.com/dsh2dsh/goxpp?status.png)](https://godoc.org/github.com/dsh2dsh/goxpp)
 
-This project is a fork of [gofeed](https://github.com/mmcdole/goxpp).
+This project is a fork of [gofeed](https://github.com/mmcdole/goxpp). Changes
+from upstream:
+
+* Less memory allocs
+
+  It reuses some internal structures, instead of copying it, so less allocs:
+
+  before/after:
+  ```
+  BenchmarkNextTag-6  151468  8570 ns/op  5170 B/op  97 allocs/op
+  BenchmarkNextTag-6  173622  7286 ns/op  4305 B/op  71 allocs/op
+  ```
+
+  `XMLPullParser.Text` refers to the parser's internal buffer and remain valid
+  only for the current state. To acquire a copy of the string, call
+  `strings.Call`.
 
 ---
 

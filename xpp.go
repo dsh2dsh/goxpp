@@ -8,14 +8,13 @@ import (
 	"maps"
 	"net/url"
 	"strings"
+	"unsafe"
 )
 
-type (
-	XMLEventType  int
-	CharsetReader func(charset string, input io.Reader) (io.Reader, error)
+const (
+	xmlNSURI    = "http://www.w3.org/XML/1998/namespace"
+	xmlnsPrefix = "xmlns"
 )
-
-const xmlNSURI = "http://www.w3.org/XML/1998/namespace"
 
 const (
 	StartDocument XMLEventType = iota
@@ -30,26 +29,32 @@ const (
 	// TODO: CDSECT ?
 )
 
+type (
+	XMLEventType  int
+	CharsetReader func(charset string, input io.Reader) (io.Reader, error)
+)
+
 type urlStack []*url.URL
 
-func (s *urlStack) push(u *url.URL) {
-	*s = append([]*url.URL{u}, *s...)
-}
+func (s *urlStack) push(u *url.URL) { *s = append(*s, u) }
 
 func (s *urlStack) pop() *url.URL {
-	if s == nil || len(*s) == 0 {
+	n := len(*s)
+	if n == 0 {
 		return nil
 	}
-	var top *url.URL
-	top, *s = (*s)[0], (*s)[1:]
+
+	top := s.Top()
+	*s = (*s)[:n-1]
 	return top
 }
 
 func (s *urlStack) Top() *url.URL {
-	if s == nil || len(*s) == 0 {
+	n := len(*s)
+	if n == 0 {
 		return nil
 	}
-	return (*s)[0]
+	return (*s)[n-1]
 }
 
 type XMLPullParser struct {
@@ -64,7 +69,10 @@ type XMLPullParser struct {
 	Attrs []xml.Attr
 	Name  string
 	Space string
-	Text  string
+
+	// Text refers to the parser's internal buffer and remain valid only for the
+	// current state. To acquire a copy of the string, call [strings.Call].
+	Text string
 
 	decoder *xml.Decoder
 	token   any
@@ -74,12 +82,18 @@ func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader) *XMLPullParser
 	d := xml.NewDecoder(r)
 	d.Strict = strict
 	d.CharsetReader = cr
-	return &XMLPullParser{
-		decoder: d,
-		Event:   StartDocument,
-		Depth:   0,
-		Spaces:  map[string]string{},
+
+	p := &XMLPullParser{
+		decoder:     d,
+		Event:       StartDocument,
+		SpacesStack: []map[string]string{{}},
 	}
+	return p.init()
+}
+
+func (p *XMLPullParser) init() *XMLPullParser {
+	p.Spaces = p.SpacesStack[0]
+	return p
 }
 
 func (p *XMLPullParser) NextTag() (event XMLEventType, err error) {
@@ -128,7 +142,7 @@ func (p *XMLPullParser) Next() (event XMLEventType, err error) {
 	}
 }
 
-func (p *XMLPullParser) NextToken() (event XMLEventType, err error) {
+func (p *XMLPullParser) NextToken() (XMLEventType, error) {
 	// Clear any state held for the previous token
 	p.resetTokenState()
 
@@ -142,13 +156,12 @@ func (p *XMLPullParser) NextToken() (event XMLEventType, err error) {
 			p.Event = EndDocument
 			return p.Event, nil
 		}
-		return event, fmt.Errorf("goxpp: %w", err)
+		return 0, fmt.Errorf("goxpp: %w", err)
 	}
 
-	p.token = xml.CopyToken(token)
+	p.token = token
 	p.processToken(p.token)
 	p.Event = p.EventType(p.token)
-
 	return p.Event, nil
 }
 
@@ -180,7 +193,6 @@ func (p *XMLPullParser) NextText() (string, error) {
 					p.EventName(t))
 		}
 	}
-
 	return result, nil
 }
 
@@ -216,8 +228,8 @@ func (p *XMLPullParser) Expect(event XMLEventType, name string) (err error) {
 
 func (p *XMLPullParser) ExpectAll(event XMLEventType, space, name string) error {
 	ok := p.Event == event &&
-		(strings.EqualFold(p.Space, space) || space == "*") &&
-		(strings.EqualFold(p.Name, name) || name == "*")
+		(space == "*" || strings.EqualFold(p.Space, space)) &&
+		(name == "*" || strings.EqualFold(p.Name, name))
 	if !ok {
 		return fmt.Errorf("expected space:%s name:%s event:%s but got space:%s name:%s event:%s at offset: %d", space, name, p.EventName(event), p.Space, p.Name, p.EventName(p.Event), p.decoder.InputOffset())
 	}
@@ -228,9 +240,6 @@ func (p *XMLPullParser) DecodeElement(v any) error {
 	if p.Event != StartTag {
 		return errors.New("decodeelement can only be called from a starttag event")
 	}
-
-	// tok := &p.token
-
 	startToken := p.token.(xml.StartElement)
 
 	// Consumes all tokens until the matching end token.
@@ -238,7 +247,6 @@ func (p *XMLPullParser) DecodeElement(v any) error {
 	if err != nil {
 		return fmt.Errorf("goxpp: %w", err)
 	}
-
 	name := p.Name
 
 	// Need to set the "current" token name/event
@@ -367,19 +375,29 @@ func (p *XMLPullParser) processEndToken(t xml.EndElement) {
 }
 
 func (p *XMLPullParser) processCharDataToken(t xml.CharData) {
-	p.Text = string([]byte(t))
+	p.Text = unsafeBytesToString(t)
+}
+
+// This conversion *does not* copy data. Note that casting via
+// "(string)([]byte)" *does* copy data. Also note that you *should not* change
+// the byte slice after conversion, because Go strings are treated as immutable.
+// This would cause a segmentation violation panic.
+//
+// https://www.reddit.com/r/golang/comments/14xvgoj/converting_string_byte/
+func unsafeBytesToString(b []byte) string {
+	return unsafe.String(unsafe.SliceData(b), len(b))
 }
 
 func (p *XMLPullParser) processCommentToken(t xml.Comment) {
-	p.Text = string([]byte(t))
+	p.Text = unsafeBytesToString(t)
 }
 
 func (p *XMLPullParser) processProcInstToken(t xml.ProcInst) {
-	p.Text = fmt.Sprintf("%s %s", t.Target, string(t.Inst))
+	p.Text = t.Target + string(t.Inst)
 }
 
 func (p *XMLPullParser) processDirectiveToken(t xml.Directive) {
-	p.Text = string([]byte(t))
+	p.Text = unsafeBytesToString(t)
 }
 
 func (p *XMLPullParser) resetTokenState() {
@@ -390,14 +408,13 @@ func (p *XMLPullParser) resetTokenState() {
 }
 
 func (p *XMLPullParser) trackNamespaces(t xml.StartElement) {
-	newSpace := map[string]string{}
+	newSpace := make(map[string]string, len(p.Spaces))
 	maps.Copy(newSpace, p.Spaces)
 	for _, attr := range t.Attr {
-		if attr.Name.Space == "xmlns" {
+		if attr.Name.Space == xmlnsPrefix {
 			space := strings.TrimSpace(attr.Value)
-			spacePrefix := strings.TrimSpace(strings.ToLower(attr.Name.Local))
-			newSpace[space] = spacePrefix
-		} else if attr.Name.Local == "xmlns" {
+			newSpace[space] = strings.TrimSpace(strings.ToLower(attr.Name.Local))
+		} else if attr.Name.Local == xmlnsPrefix {
 			space := strings.TrimSpace(attr.Value)
 			newSpace[space] = ""
 		}
@@ -407,13 +424,7 @@ func (p *XMLPullParser) trackNamespaces(t xml.StartElement) {
 }
 
 // returns the popped base URL
-func (p *XMLPullParser) popBase() string {
-	url := p.BaseStack.pop()
-	if url != nil {
-		return url.String()
-	}
-	return ""
-}
+func (p *XMLPullParser) popBase() { p.BaseStack.pop() }
 
 // Searches current attributes for xml:base and updates the urlStack
 func (p *XMLPullParser) pushBase() error {
