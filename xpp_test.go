@@ -3,13 +3,44 @@ package xpp_test
 import (
 	"bytes"
 	"io"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	xpp "github.com/mmcdole/goxpp"
+	xpp "github.com/dsh2dsh/goxpp"
 )
+
+func BenchmarkNextTag(b *testing.B) {
+	tests := []struct {
+		name string
+		feed []byte
+	}{
+		{name: "large_atom.xml"},
+		{name: "large_rss.xml"},
+	}
+
+	for i := range tests {
+		tt := &tests[i]
+		data, err := os.ReadFile("testdata/" + tt.name)
+		require.NoError(b, err)
+		tt.feed = data
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		for _, tt := range tests {
+			p := xpp.NewXMLPullParser(bytes.NewReader(tt.feed), false, nil)
+			for {
+				event, err := p.NextTag()
+				if err != nil || event == xpp.EndDocument {
+					break
+				}
+			}
+		}
+	}
+}
 
 func TestEventName(t *testing.T) {
 	eventNameTests := []struct {
