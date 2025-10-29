@@ -20,6 +20,14 @@ from upstream:
   only for the current state. To acquire a copy of the string, call
   `strings.Call`.
 
+* Export internal `xml.Token`
+
+  `Token()` returns the current XML token in the input stream.
+
+  Slices of bytes in the returned token data refer to the parser's internal
+  buffer and remain valid only for the current state. To acquire a copy of the
+  bytes, call `xml.CopyToken` or the token's `Copy` method.
+
 ---
 
 A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://www.xmlpull.org/v1/download/unpacked/doc/quick_intro.html). It provides fine-grained control over XML parsing with a simple, intuitive API.

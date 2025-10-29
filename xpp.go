@@ -453,3 +453,10 @@ func (p *XMLPullParser) pushBase() error {
 	p.BaseStack.push(newURL)
 	return nil
 }
+
+// Token returns the current XML token in the input stream.
+//
+// Slices of bytes in the returned token data refer to the parser's internal
+// buffer and remain valid only for the current state. To acquire a copy of the
+// bytes, call [xml.CopyToken] or the token's Copy method.
+func (p *XMLPullParser) Token() xml.Token { return p.token }
