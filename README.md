@@ -3,7 +3,7 @@
 [![Go](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml/badge.svg)](https://github.com/dsh2dsh/goxpp/actions/workflows/go.yml)
 [![GoDoc](https://godoc.org/github.com/dsh2dsh/goxpp/v2?status.png)](https://godoc.org/github.com/dsh2dsh/goxpp/v2)
 
-This project is a fork of [gofeed](https://github.com/mmcdole/goxpp). Changes
+This project is a fork of [goxpp](https://github.com/mmcdole/goxpp). Changes
 from upstream:
 
 * Less memory allocs
