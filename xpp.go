@@ -362,7 +362,7 @@ func (p *XMLPullParser) processStartToken(t xml.StartElement) {
 	p.Depth++
 	p.Attrs = t.Attr
 	p.Name = t.Name.Local
-	p.Space = t.Name.Space
+	p.Space = strings.TrimSpace(t.Name.Space)
 	p.trackNamespaces(t)
 	_ = p.pushBase()
 }
