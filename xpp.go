@@ -71,7 +71,6 @@ type XMLPullParser struct {
 
 	decoder *xml.Decoder
 	token   any
-	text    []byte
 }
 
 func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader,
@@ -180,7 +179,7 @@ func (p *XMLPullParser) NextText() (string, error) {
 
 	var result strings.Builder
 	for t == Text {
-		result.Write(p.text)
+		result.WriteString(p.Text())
 		t, err = p.Next()
 		if err != nil {
 			return "", err
@@ -197,10 +196,17 @@ func (p *XMLPullParser) NextText() (string, error) {
 
 // Text returns text of current xml token as string.
 func (p *XMLPullParser) Text() string {
-	if len(p.text) == 0 {
-		return ""
+	switch tt := p.token.(type) {
+	case xml.CharData:
+		return string(tt)
+	case xml.Comment:
+		return string(tt)
+	case xml.ProcInst:
+		return tt.Target + " " + string(tt.Inst)
+	case xml.Directive:
+		return string(tt)
 	}
-	return string(p.text)
+	return ""
 }
 
 func (p *XMLPullParser) Skip() error {
@@ -349,14 +355,6 @@ func (p *XMLPullParser) processToken(t xml.Token) {
 		p.processStartToken(tt)
 	case xml.EndElement:
 		p.processEndToken(tt)
-	case xml.CharData:
-		p.processCharDataToken(tt)
-	case xml.Comment:
-		p.processCommentToken(tt)
-	case xml.ProcInst:
-		p.processProcInstToken(tt)
-	case xml.Directive:
-		p.processDirectiveToken(tt)
 	}
 }
 
@@ -372,36 +370,15 @@ func (p *XMLPullParser) processStartToken(t xml.StartElement) {
 func (p *XMLPullParser) processEndToken(t xml.EndElement) {
 	p.Depth--
 	p.SpacesStack = p.SpacesStack[:len(p.SpacesStack)-1]
-	if len(p.SpacesStack) == 0 {
-		p.Spaces = map[string]string{}
-	} else {
-		p.Spaces = p.SpacesStack[len(p.SpacesStack)-1]
-	}
+	p.Spaces = p.SpacesStack[len(p.SpacesStack)-1]
 	p.Name = t.Name.Local
 	p.popBase()
-}
-
-func (p *XMLPullParser) processCharDataToken(t xml.CharData) {
-	p.text = []byte(t)
-}
-
-func (p *XMLPullParser) processCommentToken(t xml.Comment) {
-	p.text = []byte(t)
-}
-
-func (p *XMLPullParser) processProcInstToken(t xml.ProcInst) {
-	p.text = []byte(t.Target + " " + string(t.Inst))
-}
-
-func (p *XMLPullParser) processDirectiveToken(t xml.Directive) {
-	p.text = []byte(t)
 }
 
 func (p *XMLPullParser) resetTokenState() {
 	p.Attrs = nil
 	p.Name = ""
 	p.Space = ""
-	p.text = nil
 }
 
 func (p *XMLPullParser) trackNamespaces(t xml.StartElement) {

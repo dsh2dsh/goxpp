@@ -13,7 +13,7 @@ from upstream:
   before/after:
   ```
   BenchmarkNextTag-6  151468  8570 ns/op  5170 B/op  97 allocs/op
-  BenchmarkNextTag-6  173622  7286 ns/op  4305 B/op  71 allocs/op
+  BenchmarkNextTag-6  175459  6928 ns/op  4177 B/op  69 allocs/op
   ```
 
   `Text` field is private now and accessible via `Text` method, which returns
