@@ -70,7 +70,7 @@ type XMLPullParser struct {
 	Space string
 
 	decoder *xml.Decoder
-	token   any
+	token   xml.Token
 }
 
 func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader,
