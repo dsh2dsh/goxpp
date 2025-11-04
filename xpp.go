@@ -165,7 +165,9 @@ func (p *XMLPullParser) NextToken() (XMLEventType, error) {
 
 func (p *XMLPullParser) NextText() (string, error) {
 	if p.Event != StartTag {
-		return "", errors.New("parser must be on starttag to get nexttext()")
+		return "", fmt.Errorf(
+			"goxpp: parser must be on starttag to get nexttext(), got event=%s name=%s",
+			p.EventName(p.Event), p.Name)
 	}
 
 	t, err := p.Next()
@@ -174,7 +176,9 @@ func (p *XMLPullParser) NextText() (string, error) {
 	}
 
 	if t != EndTag && t != Text {
-		return "", errors.New("parser must be on endtag or text to read text")
+		return "", fmt.Errorf(
+			"goxpp: parser must be on endtag or text to read text, got event=%s name=%s",
+			p.EventName(p.Event), p.Name)
 	}
 
 	var result strings.Builder
@@ -186,9 +190,9 @@ func (p *XMLPullParser) NextText() (string, error) {
 		}
 
 		if t != EndTag && t != Text {
-			return "", errors.New(
-				"event text must be immediately followed by endtag or text but got " +
-					p.EventName(t))
+			return "", fmt.Errorf(
+				"goxpp: event text must be immediately followed by endtag or text, got event=%s name=%s",
+				p.EventName(t), p.Name)
 		}
 	}
 	return result.String(), nil
