@@ -181,9 +181,20 @@ func (p *XMLPullParser) NextText() (string, error) {
 			p.EventName(p.Event), p.Name)
 	}
 
-	var result strings.Builder
+	var result1 string
+	var result2 strings.Builder
+
 	for t == Text {
-		result.WriteString(p.Text())
+		switch {
+		case result1 == "":
+			result1 = p.Text()
+		case result2.Len() == 0:
+			result2.WriteString(result1)
+			fallthrough
+		default:
+			result2.WriteString(p.Text())
+		}
+
 		t, err = p.Next()
 		if err != nil {
 			return "", err
@@ -195,7 +206,11 @@ func (p *XMLPullParser) NextText() (string, error) {
 				p.EventName(t), p.Name)
 		}
 	}
-	return result.String(), nil
+
+	if result2.Len() != 0 {
+		return result2.String(), nil
+	}
+	return result1, nil
 }
 
 // Text returns text of current xml token as string.
