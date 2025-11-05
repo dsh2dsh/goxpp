@@ -429,8 +429,12 @@ func (p *XMLPullParser) pushBase() error {
 			break
 		}
 	}
+
 	if base == "" {
 		// no base attribute found
+		if top := p.BaseStack.Top(); top != nil {
+			p.BaseStack.push(top)
+		}
 		return nil
 	}
 
