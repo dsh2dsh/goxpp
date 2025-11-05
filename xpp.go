@@ -350,8 +350,20 @@ func (p *XMLPullParser) EventType(t xml.Token) XMLEventType {
 
 // resolve the given string as a URL relative to current xml:base
 func (p *XMLPullParser) XmlBaseResolveUrl(u string) (*url.URL, error) {
-	curr := p.BaseStack.Top()
-	if curr == nil {
+	return p.xmlBaseResolve(p.BaseStack.Top(), u)
+}
+
+// XmlBaseResolver returns func, which resolves given string as an URL, relative
+// to current xml:base. Can be used anytime later, event when current tag has
+// changed.
+func (p *XMLPullParser) XmlBaseResolver() func(string) (*url.URL, error) {
+	top := p.BaseStack.Top()
+	return func(u string) (*url.URL, error) { return p.xmlBaseResolve(top, u) }
+}
+
+func (p *XMLPullParser) xmlBaseResolve(top *url.URL, u string,
+) (*url.URL, error) {
+	if top == nil {
 		return nil, nil
 	}
 
@@ -359,13 +371,13 @@ func (p *XMLPullParser) XmlBaseResolveUrl(u string) (*url.URL, error) {
 	if err != nil {
 		return nil, fmt.Errorf("goxpp: %w", err)
 	}
-	if curr.Path != "" && u != "" && curr.Path[len(curr.Path)-1] != '/' {
+
+	if top.Path != "" && u != "" && top.Path[len(top.Path)-1] != '/' {
 		// There's no reason someone would use a path in xml:base if they
 		// didn't mean for it to be a directory
-		curr.Path += "/"
+		top.Path += "/"
 	}
-	absURL := curr.ResolveReference(relURL)
-	return absURL, nil
+	return top.ResolveReference(relURL), nil
 }
 
 func (p *XMLPullParser) processToken(t xml.Token) {
