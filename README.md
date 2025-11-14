@@ -40,6 +40,10 @@ from upstream:
   `NewXMLPullParser` will override `Strict` and `CharsetReader` of
   `xml.Decoder`.
 
+* Decode all HTML entities by default.
+
+  To override it use custom `xml.Decoder` via `xpp.WithDecoder`.
+
 ---
 
 A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://www.xmlpull.org/v1/download/unpacked/doc/quick_intro.html). It provides fine-grained control over XML parsing with a simple, intuitive API.

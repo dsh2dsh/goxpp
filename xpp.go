@@ -87,7 +87,9 @@ func NewXMLPullParser(r io.Reader, strict bool, cr CharsetReader,
 	p.Spaces = p.SpacesStack[0]
 
 	if p.decoder == nil {
-		p.decoder = xml.NewDecoder(r)
+		d := xml.NewDecoder(r)
+		d.Entity = xml.HTMLEntity
+		p.decoder = d
 	}
 	p.decoder.Strict = strict
 	p.decoder.CharsetReader = cr
