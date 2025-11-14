@@ -249,7 +249,7 @@ func (p *XMLPullParser) Skip() error {
 
 func (p *XMLPullParser) Attribute(name string) string {
 	for _, attr := range p.Attrs {
-		if attr.Name.Local == name {
+		if strings.EqualFold(attr.Name.Local, name) {
 			return attr.Value
 		}
 	}
