@@ -460,8 +460,7 @@ func (p *XMLPullParser) pushBase() error {
 		return fmt.Errorf("goxpp: %w", err)
 	}
 
-	topURL := p.BaseStack.Top()
-	if topURL != nil {
+	if topURL := p.BaseStack.Top(); topURL != nil {
 		newURL = topURL.ResolveReference(newURL)
 	}
 	p.BaseStack.push(newURL)

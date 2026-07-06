@@ -205,20 +205,22 @@ func TestXmlBaseSurvivesContainerClose(t *testing.T) {
 	crReader := func(charset string, input io.Reader) (io.Reader, error) {
 		return input, nil
 	}
+
 	// <child> has no xml:base of its own; closing it must not discard the root's
 	// base for the following <after>.
 	r := bytes.NewBufferString(`<root xml:base="http://example.org/a/"><child></child><after></after></root>`)
 	p := xpp.NewXMLPullParser(r, false, crReader)
+
 	p.NextTag() // <root>
 	p.NextTag() // <child>
 	p.NextTag() // </child>  (processEndToken pops a base)
 	p.NextTag() // <after>
-	assert.Equal(t, p.Name, "after")
+	assert.Equal(t, "after", p.Name)
+
 	got, err := p.XmlBaseResolveUrl("rel")
 	require.NoError(t, err)
-	if got == nil || got.String() != "http://example.org/a/rel" {
-		t.Errorf("resolved = %v, want http://example.org/a/rel", got)
-	}
+	require.NotNil(t, got)
+	assert.Equal(t, "http://example.org/a/rel", got.String())
 }
 
 func toNextStart(t *testing.T, p *xpp.XMLPullParser) {
