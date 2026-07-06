@@ -122,21 +122,26 @@ func TestDecodeElementNamespaceStack(t *testing.T) {
 	crReader := func(charset string, input io.Reader) (io.Reader, error) {
 		return input, nil
 	}
+
 	// The first <d2> declares its own namespace (b:w). After decoding it, that
 	// scope must be popped so the parser is back to root's namespaces.
 	r := bytes.NewBufferString(`<root xmlns:a="z"><d2 xmlns:b="w">foo</d2><d2>bar</d2></root>`)
 	p := xpp.NewXMLPullParser(r, false, crReader)
-	type v struct{}
+
 	p.NextTag() // root
 	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
-	assert.Len(t, p.SpacesStack, 1)
+	assert.Len(t, p.SpacesStack, 2)
+
 	p.NextTag() // first <d2>, adds b:w
 	assert.Equal(t, map[string]string{"z": "a", "w": "b"}, p.Spaces)
-	assert.Len(t, p.SpacesStack, 2)
+	assert.Len(t, p.SpacesStack, 3)
+
+	type v struct{}
 	p.DecodeElement(&v{})
 	// Scope must be back to root's: b:w no longer leaks and the stack shrank.
 	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
-	assert.Len(t, p.SpacesStack, 1)
+	assert.Len(t, p.SpacesStack, 2)
+
 	p.NextTag() // second <d2>
 	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
 }

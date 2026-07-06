@@ -295,20 +295,8 @@ func (p *XMLPullParser) DecodeElement(v any) error {
 	// to the previous StartTag event's name
 	p.resetTokenState()
 	p.Event = EndTag
-	p.Depth--
-	p.Name = name
+	p.processEndToken(xml.EndElement{Name: xml.Name{Local: name}})
 	p.token = nil
-
-	// if the token we decoded had an xml:base attribute, we need to pop it
-	// from the stack
-	// Note: this means it is up to the caller of DecodeElement to save the current xml:base
-	// before calling DecodeElement if it needs to resolve relative URLs in `v`
-	for _, attr := range startToken.Attr {
-		if attr.Name.Space == xmlNSURI && attr.Name.Local == "base" {
-			p.popBase()
-			break
-		}
-	}
 	return nil
 }
 
