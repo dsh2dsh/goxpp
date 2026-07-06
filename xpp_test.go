@@ -186,13 +186,17 @@ func TestXmlBaseResolveUrlDoesNotMutateBase(t *testing.T) {
 	crReader := func(charset string, input io.Reader) (io.Reader, error) {
 		return input, nil
 	}
+
 	r := bytes.NewBufferString(`<root xml:base="https://example.org/a/b"><d/></root>`)
 	p := xpp.NewXMLPullParser(r, false, crReader)
+
 	p.NextTag() // root, base is https://example.org/a/b
 	before := p.BaseStack.Top().String()
+
 	resolved, err := p.XmlBaseResolveUrl("x")
 	require.NoError(t, err)
 	assert.Equal(t, "https://example.org/a/b/x", resolved.String())
+
 	// The stacked base must be unchanged by the resolution.
 	assert.Equal(t, before, p.BaseStack.Top().String())
 }

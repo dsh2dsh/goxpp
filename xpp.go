@@ -370,10 +370,17 @@ func (p *XMLPullParser) xmlBaseResolve(top *url.URL, u string,
 		return nil, fmt.Errorf("goxpp: %w", err)
 	}
 
+	var top2 url.URL
 	if top.Path != "" && u != "" && top.Path[len(top.Path)-1] != '/' {
+		// Work on a copy: top is the live base held on the stack, so appending "/"
+		// to it would rewrite the base for every sibling resolved after the first
+		// relative URL in this scope.
+		top2 = *top
+
 		// There's no reason someone would use a path in xml:base if they
 		// didn't mean for it to be a directory
-		top.Path += "/"
+		top2.Path += "/"
+		top = &top2
 	}
 	return top.ResolveReference(relURL), nil
 }
