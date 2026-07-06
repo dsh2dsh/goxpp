@@ -118,6 +118,29 @@ func TestDecodeElementDepth(t *testing.T) {
 	p.DecodeElement(&v{})
 }
 
+func TestDecodeElementNamespaceStack(t *testing.T) {
+	crReader := func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+	// The first <d2> declares its own namespace (b:w). After decoding it, that
+	// scope must be popped so the parser is back to root's namespaces.
+	r := bytes.NewBufferString(`<root xmlns:a="z"><d2 xmlns:b="w">foo</d2><d2>bar</d2></root>`)
+	p := xpp.NewXMLPullParser(r, false, crReader)
+	type v struct{}
+	p.NextTag() // root
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
+	assert.Len(t, p.SpacesStack, 1)
+	p.NextTag() // first <d2>, adds b:w
+	assert.Equal(t, map[string]string{"z": "a", "w": "b"}, p.Spaces)
+	assert.Len(t, p.SpacesStack, 2)
+	p.DecodeElement(&v{})
+	// Scope must be back to root's: b:w no longer leaks and the stack shrank.
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
+	assert.Len(t, p.SpacesStack, 1)
+	p.NextTag() // second <d2>
+	assert.Equal(t, map[string]string{"z": "a"}, p.Spaces)
+}
+
 func TestXMLBase(t *testing.T) {
 	crReader := func(charset string, input io.Reader) (io.Reader, error) {
 		return input, nil
@@ -152,6 +175,41 @@ func TestXMLBase(t *testing.T) {
 	p.NextTag()
 	assert.Equal(t, "d2", p.Name)
 	assert.Equal(t, "https://example.org/path/", p.BaseStack.Top().String())
+}
+
+func TestXmlBaseResolveUrlDoesNotMutateBase(t *testing.T) {
+	crReader := func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+	r := bytes.NewBufferString(`<root xml:base="https://example.org/a/b"><d/></root>`)
+	p := xpp.NewXMLPullParser(r, false, crReader)
+	p.NextTag() // root, base is https://example.org/a/b
+	before := p.BaseStack.Top().String()
+	resolved, err := p.XmlBaseResolveUrl("x")
+	require.NoError(t, err)
+	assert.Equal(t, "https://example.org/a/b/x", resolved.String())
+	// The stacked base must be unchanged by the resolution.
+	assert.Equal(t, before, p.BaseStack.Top().String())
+}
+
+func TestXmlBaseSurvivesContainerClose(t *testing.T) {
+	crReader := func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+	// <child> has no xml:base of its own; closing it must not discard the root's
+	// base for the following <after>.
+	r := bytes.NewBufferString(`<root xml:base="http://example.org/a/"><child></child><after></after></root>`)
+	p := xpp.NewXMLPullParser(r, false, crReader)
+	p.NextTag() // <root>
+	p.NextTag() // <child>
+	p.NextTag() // </child>  (processEndToken pops a base)
+	p.NextTag() // <after>
+	assert.Equal(t, p.Name, "after")
+	got, err := p.XmlBaseResolveUrl("rel")
+	require.NoError(t, err)
+	if got == nil || got.String() != "http://example.org/a/rel" {
+		t.Errorf("resolved = %v, want http://example.org/a/rel", got)
+	}
 }
 
 func toNextStart(t *testing.T, p *xpp.XMLPullParser) {

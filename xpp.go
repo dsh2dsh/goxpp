@@ -230,7 +230,12 @@ func (p *XMLPullParser) Text() string {
 	return ""
 }
 
+// Skip consumes tokens until the end tag matching the element the parser is
+// currently positioned on. It is iterative (a depth counter rather than
+// recursion) so deeply nested input can't overflow the goroutine stack, and it
+// bails on EndDocument instead of looping forever on a truncated stream.
 func (p *XMLPullParser) Skip() error {
+	var depth int
 	for {
 		tok, err := p.NextToken()
 		if err != nil {
@@ -238,11 +243,14 @@ func (p *XMLPullParser) Skip() error {
 		}
 		switch tok {
 		case StartTag:
-			if err := p.Skip(); err != nil {
-				return err
-			}
+			depth++
 		case EndTag:
-			return nil
+			if depth == 0 {
+				return nil
+			}
+			depth--
+		case EndDocument:
+			return errors.New("unexpected end of document while skipping element")
 		}
 	}
 }
