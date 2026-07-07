@@ -269,6 +269,17 @@ func (p *XMLPullParser) Attribute(name string) string {
 	return found
 }
 
+func (p *XMLPullParser) AttributeNS(name, space string) string {
+	for _, attr := range p.Attrs {
+		if strings.EqualFold(attr.Name.Local, name) &&
+			strings.EqualFold(attr.Name.Space, space) {
+
+			return attr.Value
+		}
+	}
+	return ""
+}
+
 func (p *XMLPullParser) Expect(event XMLEventType, name string) (err error) {
 	return p.ExpectAll(event, "*", name)
 }

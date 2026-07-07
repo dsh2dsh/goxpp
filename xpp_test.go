@@ -482,3 +482,13 @@ func TestAttributeNamespacedFallback(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "only", p.Attribute("href"), "Attribute(href)")
 }
+
+func TestAttributeNS(t *testing.T) {
+	doc := `<root xmlns:o="http://other" href="WRONG" o:href="right"/>`
+	p := xpp.NewXMLPullParser(bytes.NewReader([]byte(doc)), false, nil)
+
+	_, err := p.NextTag()
+	require.NoError(t, err)
+	assert.Equal(t, "right", p.AttributeNS("href", "http://other"),
+		"Attribute(href)")
+}
