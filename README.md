@@ -44,6 +44,11 @@ without an AI slop. Changes from upstream:
 
   To override it use custom `xml.Decoder` via `xpp.WithDecoder`.
 
+* Add `AttributeNS(name, space string) string`
+
+  which returns value of an attribute named name in namespace space or empty
+  string if not found.
+
 ---
 
 A lightweight XML Pull Parser for Go, inspired by [Java's XMLPullParser](http://www.xmlpull.org/v1/download/unpacked/doc/quick_intro.html). It provides fine-grained control over XML parsing with a simple, intuitive API.

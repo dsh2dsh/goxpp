@@ -269,6 +269,8 @@ func (p *XMLPullParser) Attribute(name string) string {
 	return found
 }
 
+// AttributeNS returns value of an attribute named name in namespace space or
+// empty string if not found.
 func (p *XMLPullParser) AttributeNS(name, space string) string {
 	for _, attr := range p.Attrs {
 		if strings.EqualFold(attr.Name.Local, name) &&
