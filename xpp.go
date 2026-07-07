@@ -256,12 +256,17 @@ func (p *XMLPullParser) Skip() error {
 }
 
 func (p *XMLPullParser) Attribute(name string) string {
+	var found string
 	for _, attr := range p.Attrs {
 		if strings.EqualFold(attr.Name.Local, name) {
-			return attr.Value
+			if attr.Name.Space == "" {
+				return attr.Value
+			} else if found == "" {
+				found = attr.Value
+			}
 		}
 	}
-	return ""
+	return found
 }
 
 func (p *XMLPullParser) Expect(event XMLEventType, name string) (err error) {

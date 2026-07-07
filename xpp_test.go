@@ -461,3 +461,24 @@ func TestDecodeElementEndTagSpace(t *testing.T) {
 	require.NoError(t, p.ExpectAll(xpp.EndTag, "http://ns", "x"),
 		"ExpectAll on synthetic end tag")
 }
+
+// A foreign-namespaced attribute must not shadow the plain attribute with
+// the same local name (issue #31).
+func TestAttributePrefersUnNamespaced(t *testing.T) {
+	doc := `<root xmlns:o="http://other" o:href="WRONG" href="right"/>`
+	p := xpp.NewXMLPullParser(bytes.NewReader([]byte(doc)), false, nil)
+
+	_, err := p.NextTag()
+	require.NoError(t, err)
+	assert.Equal(t, "right", p.Attribute("href"), "Attribute(href)")
+}
+
+// When only a namespaced attribute exists it is still returned by local name.
+func TestAttributeNamespacedFallback(t *testing.T) {
+	doc := `<root xmlns:o="http://other" o:href="only"/>`
+	p := xpp.NewXMLPullParser(bytes.NewReader([]byte(doc)), false, nil)
+
+	_, err := p.NextTag()
+	require.NoError(t, err)
+	assert.Equal(t, "only", p.Attribute("href"), "Attribute(href)")
+}
