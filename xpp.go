@@ -289,13 +289,16 @@ func (p *XMLPullParser) DecodeElement(v any) error {
 	if err != nil {
 		return fmt.Errorf("goxpp: %w", err)
 	}
-	name := p.Name
 
 	// Need to set the "current" token name/event
 	// to the previous StartTag event's name
+	name := p.Name
+	space := p.Space
 	p.resetTokenState()
 	p.Event = EndTag
-	p.processEndToken(xml.EndElement{Name: xml.Name{Local: name}})
+	p.processEndToken(xml.EndElement{
+		Name: xml.Name{Space: space, Local: name},
+	})
 	p.token = nil
 	return nil
 }
@@ -408,6 +411,7 @@ func (p *XMLPullParser) processEndToken(t xml.EndElement) {
 	p.SpacesStack = p.SpacesStack[:len(p.SpacesStack)-1]
 	p.Spaces = p.SpacesStack[len(p.SpacesStack)-1]
 	p.Name = t.Name.Local
+	p.Space = strings.TrimSpace(t.Name.Space)
 	p.popBase()
 }
 

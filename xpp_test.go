@@ -419,3 +419,45 @@ func TestSpecialCases(t *testing.T) {
 		})
 	}
 }
+
+// EndTag events must carry the element's namespace so ExpectAll can validate
+// end tags (issue #29).
+func TestEndTagSpacePopulated(t *testing.T) {
+	doc := `<a:x xmlns:a="http://ns">v</a:x>`
+	p := xpp.NewXMLPullParser(bytes.NewReader([]byte(doc)), false, nil)
+
+	for {
+		tok, err := p.NextToken()
+		require.NoError(t, err)
+		require.NotEqual(t, xpp.EndDocument, "no end tag seen")
+		if tok == xpp.EndTag {
+			break
+		}
+	}
+
+	assert.Equal(t, "http://ns", p.Space, "Space on EndTag")
+	require.NoError(t, p.ExpectAll(xpp.EndTag, "http://ns", "x"),
+		"ExpectAll on end tag")
+}
+
+// The synthetic EndTag left behind by DecodeElement must carry the decoded
+// element's namespace too.
+func TestDecodeElementEndTagSpace(t *testing.T) {
+	doc := `<root xmlns:a="http://ns"><a:x><n>1</n></a:x></root>`
+	p := xpp.NewXMLPullParser(bytes.NewReader([]byte(doc)), false, nil)
+
+	for {
+		tok, err := p.NextToken()
+		require.NoError(t, err)
+		if tok == xpp.StartTag && p.Name == "x" {
+			break
+		}
+	}
+
+	var v struct {
+		N int `xml:"n"`
+	}
+	require.NoError(t, p.DecodeElement(&v), "DecodeElement")
+	require.NoError(t, p.ExpectAll(xpp.EndTag, "http://ns", "x"),
+		"ExpectAll on synthetic end tag")
+}
