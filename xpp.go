@@ -460,15 +460,7 @@ func (p *XMLPullParser) popBase() { p.BaseStack.pop() }
 
 // Searches current attributes for xml:base and updates the urlStack
 func (p *XMLPullParser) pushBase() error {
-	var base string
-	// search list of attrs for "xml:base"
-	for _, attr := range p.Attrs {
-		if attr.Name.Local == "base" && attr.Name.Space == xmlNSURI {
-			base = attr.Value
-			break
-		}
-	}
-
+	base := p.AttributeNS("base", XMLnamespace)
 	if base == "" {
 		// no base attribute found
 		if top := p.BaseStack.Top(); top != nil {
