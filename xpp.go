@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	xmlNSURI    = "http://www.w3.org/XML/1998/namespace"
-	xmlnsPrefix = "xmlns"
+	XMLnamespace = "http://www.w3.org/XML/1998/namespace"
+	xmlnsPrefix  = "xmlns"
 )
 
 const (
